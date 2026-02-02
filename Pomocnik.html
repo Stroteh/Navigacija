@@ -437,7 +437,7 @@
         </div>
 
         <button class="irgo-button" id="assist-button">
-            <span style="color: #00AEEF;">PRIŠEL</span> 
+            <span style="color: #00AEEF;">PRIŠEL/LA</span> 
             <span style="color: #FF6B00; margin: 0 10px;">|</span>
             <span style="color: #FFFFFF;">SEM NA SASTANEK</span>
         </button>
@@ -489,6 +489,7 @@
         let animationSpeed = 0.0006;
         let currentGuest = null;
         let excelData = null;
+        let femaleVoice = null;
         
         // Barve po IRGO shemi
         const IRGO_COLORS = {
@@ -518,7 +519,7 @@
                 await initNavigationScene();
                 
                 // 3. Setup za govor
-                setupSpeechSynthesis();
+                await setupSpeechSynthesis();
                 
                 // 4. Sistem pripravljen
                 showLoading(false);
@@ -755,6 +756,7 @@
         function addRoomLabels() {
             const rooms = [
                 { name: 'Sejna soba', x: -8.00, y: 6.73, z: -9.00 },
+                { name: 'Tajništvo', x: 2, y: 6, z: -12.98 },
                 { name: 'Tajništvo', x: -9.55, y: 6.62, z: -14.10 },
                 { name: 'Kuhinja', x: -9.03, y: 6.27, z: -19.24 },
                 { name: 'Toalet', x: -2.39, y: 6.44, z: -19.84 },
@@ -805,7 +807,7 @@
             // Ustvari teksturo puščic
             window.arrowTexture = createArrowTexture();
             
-            // Ustvari cev (pot) z puščicami
+            // Ustvari cev (pot) z puščicama
             const tubeGeo = new THREE.TubeGeometry(window.curve, 110, 0.4, 8, false);
             const tubeMat = new THREE.MeshBasicMaterial({ 
                 map: window.arrowTexture, 
@@ -852,15 +854,72 @@
             return texture;
         }
 
-        // Setup za govor
-        function setupSpeechSynthesis() {
-            // Čakamo da se glasovi naložijo
-            if (speechSynthesis.getVoices().length > 0) {
-                console.log("Glasovi že naloženi.");
+        // Setup za govor - čakanje na glasove
+        async function setupSpeechSynthesis() {
+            return new Promise((resolve) => {
+                // Če so glasovi že naloženi
+                const voices = speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    findFemaleSlovenianVoice();
+                    resolve();
+                } else {
+                    // Čakamo, da se glasovi naložijo
+                    speechSynthesis.addEventListener('voiceschanged', () => {
+                        findFemaleSlovenianVoice();
+                        resolve();
+                    });
+                }
+            });
+        }
+
+        // Najdi ženskega slovenskega glas "Petra"
+        function findFemaleSlovenianVoice() {
+            const voices = speechSynthesis.getVoices();
+            console.log("Dostopni glasovi:");
+            voices.forEach(voice => {
+                console.log(`Ime: ${voice.name}, Jezik: ${voice.lang}`);
+            });
+
+            // Iskanje slovenskega ženskega glasu - prioriteta: Petra, nato ostali slovenski ženski
+            const slovenianFemaleVoices = voices.filter(voice => 
+                voice.lang.startsWith('sl') && 
+                (voice.name.includes('Petra') || 
+                 voice.name.includes('Vesna') || 
+                 voice.name.includes('Alenka') ||
+                 voice.name.includes('Lado') ||
+                 voice.name.toLowerCase().includes('female') ||
+                 voice.name.includes('žensk') ||
+                 voice.name.includes('Žensk'))
+            );
+
+            if (slovenianFemaleVoices.length > 0) {
+                // Dajemo prioritetu Petrinemu glasu
+                const petraVoice = slovenianFemaleVoices.find(v => v.name.includes('Petra'));
+                if (petraVoice) {
+                    femaleVoice = petraVoice;
+                    console.log("Najden ženski slovenski glas PETRA:", femaleVoice.name);
+                } else {
+                    femaleVoice = slovenianFemaleVoices[0];
+                    console.log("Najden ženski slovenski glas:", femaleVoice.name);
+                }
             } else {
-                speechSynthesis.addEventListener('voiceschanged', () => {
-                    console.log("Glasovi naloženi.");
-                });
+                // Če ni slovenskega, poišči angleški ženski glas
+                const englishFemaleVoices = voices.filter(voice => 
+                    (voice.lang.startsWith('en') || voice.lang.includes('en-US') || voice.lang.includes('en-GB')) && 
+                    (voice.name.toLowerCase().includes('female') ||
+                     voice.name.includes('Microsoft Zira') ||
+                     voice.name.includes('Google UK Female') ||
+                     voice.name.includes('Google US Female'))
+                );
+                
+                if (englishFemaleVoices.length > 0) {
+                    femaleVoice = englishFemaleVoices[0];
+                    console.log("Najden angleški ženski glas:", femaleVoice.name);
+                } else if (voices.length > 0) {
+                    // Uporabi prvi dostopen glas
+                    femaleVoice = voices[0];
+                    console.log("Uporabljam privzeti glas:", femaleVoice.name);
+                }
             }
         }
 
@@ -922,6 +981,148 @@
                 }
             }
         }
+
+            // Funkcije za pravilno izgovorjavo številk v slovenščini
+const slovenianNumbers = {
+    ones: ['', 'ena', 'dve', 'tri', 'štiri', 'pet', 'šest', 'sedem', 'osem', 'devet'],
+    teens: ['deset', 'enajst', 'dvanajst', 'trinajst', 'štirinajst', 'petnajst', 'šestnajst', 'sedemnajst', 'osemnajst', 'devetnajst'],
+    tens: ['', '', 'dvajset', 'trideset', 'štirideset', 'petdeset', 'šestdeset', 'sedemdeset', 'osemdeset', 'devetdeset'],
+    hundreds: ['', 'sto', 'dvesto', 'tristo', 'štiristo', 'petsto', 'šeststo', 'sedemsto', 'osemsto', 'devetsto'],
+    
+    // Pretvori številko v besedno obliko (za sobe 100-999)
+    convertRoomNumber: function(num) {
+        // Če je številka niz, ga pretvori v število
+        const number = parseInt(num);
+        
+        if (isNaN(number)) return num; // Če ni številka, vrni original
+        
+        // Poseben primer za 0
+        if (number === 0) return 'nič';
+        
+        // Za številke manjše od 100
+        if (number < 10) return this.ones[number];
+        if (number < 20) return this.teens[number - 10];
+        if (number < 100) {
+            const tens = Math.floor(number / 10);
+            const ones = number % 10;
+            if (ones === 0) return this.tens[tens];
+            return this.ones[ones] + 'in' + this.tens[tens];
+        }
+        
+        // Za številke 100-999
+        if (number < 1000) {
+            const hundreds = Math.floor(number / 100);
+            const remainder = number % 100;
+            
+            let result = this.hundreds[hundreds];
+            
+            if (remainder > 0) {
+                // Za številke 101-109: "sto ena", "sto dve", itd.
+                if (remainder < 10) {
+                    result += ' ' + this.ones[remainder];
+                }
+                // Za številke 110-119
+                else if (remainder < 20) {
+                    result += ' ' + this.teens[remainder - 10];
+                }
+                // Za ostale
+                else {
+                    const tens = Math.floor(remainder / 10);
+                    const ones = remainder % 10;
+                    if (ones === 0) {
+                        result += ' ' + this.tens[tens];
+                    } else {
+                        result += ' ' + this.ones[ones] + 'in' + this.tens[tens];
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
+        // Za večje številke (če bi jih potrebovali)
+        return number.toString();
+    },
+    
+    // Pravilna izgovorjava v kontekstu sob (po slovenski navadi)
+    pronounceRoomNumber: function(roomNumber) {
+        const num = parseInt(roomNumber);
+        
+        // Za dvomestne sobe (10-99) - izgovarjamo "deset", "enajst", itd.
+        if (num >= 10 && num < 100) {
+            if (num < 20) {
+                return this.teens[num - 10];
+            } else {
+                const tens = Math.floor(num / 10);
+                const ones = num % 10;
+                if (ones === 0) {
+                    return this.tens[tens];
+                }
+                return this.ones[ones] + 'in' + this.tens[tens];
+            }
+        }
+        
+        // Za trištevilčne sobe (100-999)
+        if (num >= 100 && num < 1000) {
+            const hundreds = Math.floor(num / 100);
+            const remainder = num % 100;
+            
+            // Posebni primeri, ki jih izgovarjamo drugače:
+            switch(num) {
+                case 100: return 'sto';
+                case 200: return 'dvesto';
+                case 300: return 'tristo';
+                case 400: return 'štiristo';
+                case 500: return 'petsto';
+                case 600: return 'šeststo';
+                case 700: return 'sedemsto';
+                case 800: return 'osemsto';
+                case 900: return 'devetsto';
+            }
+            
+            let result = this.hundreds[hundreds];
+            
+            if (remainder > 0) {
+                if (remainder < 10) {
+                    // Za 101-109: "sto ena", "sto dve"
+                    result += ' ' + this.ones[remainder];
+                } else if (remainder < 20) {
+                    // Za 110-119: "sto deset", "sto enajst"
+                    result += ' ' + this.teens[remainder - 10];
+                } else {
+                    const tens = Math.floor(remainder / 10);
+                    const ones = remainder % 10;
+                    if (ones === 0) {
+                        result += ' ' + this.tens[tens];
+                    } else {
+                        result += ' ' + this.ones[ones] + 'in' + this.tens[tens];
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
+        // Za ostale primere
+        return this.convertRoomNumber(roomNumber);
+    }
+};
+
+// Testni primeri - lahko odstraniš kasneje
+console.log("Test izgovorjave:");
+console.log("102 ->", slovenianNumbers.pronounceRoomNumber("102")); // "sto dve"
+console.log("101 ->", slovenianNumbers.pronounceRoomNumber("101")); // "sto ena"
+console.log("110 ->", slovenianNumbers.pronounceRoomNumber("110")); // "sto deset"
+console.log("115 ->", slovenianNumbers.pronounceRoomNumber("115")); // "sto petnajst"
+console.log("123 ->", slovenianNumbers.pronounceRoomNumber("123")); // "sto triindvajset"
+console.log("201 ->", slovenianNumbers.pronounceRoomNumber("201")); // "dvesto ena"
+console.log("250 ->", slovenianNumbers.pronounceRoomNumber("250")); // "dvesto petdeset"
+console.log("11 ->", slovenianNumbers.pronounceRoomNumber("11")); // "enajst"
+console.log("25 ->", slovenianNumbers.pronounceRoomNumber("25")); // "petindvajset"
+
+
+
+
 
         // Prikaži navigacijo
         function showNavigation(guest) {
@@ -985,7 +1186,8 @@
                 document.getElementById('nav-instruction').textContent = "Sledite puščicam do sejne sobe";
             }
             
-            const navigation = `Vaš sestanek je v sobi številka ${guest.soba}. To je ${roomDescription}. `;
+            const roomNumberSpoken = slovenianNumbers.pronounceRoomNumber(guest.soba);
+            const navigation = `Vaš sestanek je v sobi številka ${roomNumberSpoken}. To je ${roomDescription}. `;
             const instructions = `Sledite rdečim puščicam na zaslonu. Vodi vas do sejne sobe. `;
             const details = `Sestanek je za projekt ${guest.projekt}. ${guest.opis}. `;
             const closing = `Lep pozdrav in dober sestanek!`;
@@ -1050,74 +1252,82 @@
             console.log("Loading status:", message);
         }
 
-        // Govor z IRGO glasom
+        // Govor z IRGO glasom - uporabi ženskega glas
         function speak(text, name = "", rate = 0.95) {
+            // Ustavi vse govore preden začnemo nov
             window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance(text);
             
-            const voices = window.speechSynthesis.getVoices();
-            
-            // Najdi ženski slovenski glas
-            let zenskiGlas = voices.find(v => 
-                v.lang.includes('sl') && 
-                (v.name.toLowerCase().includes('female') || 
-                 v.name.includes('Google') || 
-                 v.name.includes('Microsoft') ||
-                 v.name.includes('Zira') ||
-                 v.name.includes('Hana'))
-            );
-            
-            // Če ni slovenskega, poišči angleški ženski glas
-            if (!zenskiGlas) {
-                zenskiGlas = voices.find(v => 
-                    (v.lang.includes('en') || v.lang.includes('en-US')) && 
-                    (v.name.toLowerCase().includes('female') ||
-                     v.name.includes('Microsoft Zira') ||
-                     v.name.includes('Google US Female'))
-                );
-            }
-            
-            if (zenskiGlas) {
-                msg.voice = zenskiGlas;
-                msg.lang = zenskiGlas.lang;
-                console.log("Uporabljam glas:", zenskiGlas.name, "jezik:", zenskiGlas.lang);
-            } else {
-                msg.lang = 'sl-SI';
-                console.log("Uporabljam privzeti jezik: sl-SI");
-            }
-            
-            msg.rate = rate;
-            msg.pitch = 1.05;
-            msg.volume = 1;
-            
-            // Vizualni efekti
-            document.getElementById('irgo-hologram').classList.add('speaking');
-            document.getElementById('voice-visualizer').style.opacity = '1';
-            document.getElementById('status-text').textContent = "IRGO GOVORI";
-            showResponse(text, name || "IRGO Asistentka");
-            
-            const voiceBars = document.querySelectorAll('.voice-bar');
-            voiceBars.forEach(bar => {
-                bar.style.animation = 'voice-bar-pulse 0.5s infinite alternate';
-            });
-            
-            msg.onend = () => {
-                document.getElementById('irgo-hologram').classList.remove('speaking');
-                document.getElementById('voice-visualizer').style.opacity = '0';
-                document.getElementById('status-text').textContent = "IRGO ONLINE";
+            // Čakaj malo preden začnemo z novim govorom
+            setTimeout(() => {
+                const msg = new SpeechSynthesisUtterance(text);
                 
+                // Nastavi ženskega glas Petra ali drugi ženski glas
+                if (femaleVoice) {
+                    msg.voice = femaleVoice;
+                    msg.lang = femaleVoice.lang;
+                    console.log("Uporabljam glas:", femaleVoice.name, "jezik:", femaleVoice.lang);
+                } else {
+                    // Če še nismo našli glasa, poskusi ponovno
+                    const voices = speechSynthesis.getVoices();
+                    if (voices.length > 0) {
+                        findFemaleSlovenianVoice();
+                        if (femaleVoice) {
+                            msg.voice = femaleVoice;
+                            msg.lang = femaleVoice.lang;
+                        } else {
+                            msg.lang = 'sl-SI'; // Privzeti slovenski
+                        }
+                    } else {
+                        msg.lang = 'sl-SI'; // Privzeti slovenski
+                    }
+                    console.log("Uporabljam privzeti slovenski jezik");
+                }
+                
+                // Nastavitve govora
+                msg.rate = rate; // Hitrost (0.1 - 10, 1 = normalno)
+                msg.pitch = 1.05; // Višina (0 - 2, 1 = normalno)
+                msg.volume = 1; // Glasnost (0 - 1)
+                
+                // Vizualni efekti - hologram govori
+                const hologram = document.getElementById('irgo-hologram');
+                if (hologram) hologram.classList.add('speaking');
+                
+                const voiceVis = document.getElementById('voice-visualizer');
+                if (voiceVis) voiceVis.style.opacity = '1';
+                
+                const statusText = document.getElementById('status-text');
+                if (statusText) statusText.textContent = "IRGO GOVORI";
+                
+                showResponse(text, name || "IRGO Asistentka");
+                
+                // Animacija glasovnih palic
+                const voiceBars = document.querySelectorAll('.voice-bar');
                 voiceBars.forEach(bar => {
-                    bar.style.animation = 'none';
+                    bar.style.animation = 'voice-bar-pulse 0.5s infinite alternate';
                 });
-            };
-            
-            msg.onerror = (event) => {
-                console.error("Napaka pri govoru:", event);
-                document.getElementById('irgo-hologram').classList.remove('speaking');
-                document.getElementById('voice-visualizer').style.opacity = '0';
-            };
-            
-            window.speechSynthesis.speak(msg);
+                
+                // Ko se govor konča
+                msg.onend = () => {
+                    if (hologram) hologram.classList.remove('speaking');
+                    if (voiceVis) voiceVis.style.opacity = '0';
+                    if (statusText) statusText.textContent = "IRGO ONLINE";
+                    
+                    voiceBars.forEach(bar => {
+                        bar.style.animation = 'none';
+                    });
+                };
+                
+                // Ob napaki
+                msg.onerror = (event) => {
+                    console.error("Napaka pri govoru:", event);
+                    if (hologram) hologram.classList.remove('speaking');
+                    if (voiceVis) voiceVis.style.opacity = '0';
+                    if (statusText) statusText.textContent = "IRGO ONLINE";
+                };
+                
+                // Začni govoriti
+                window.speechSynthesis.speak(msg);
+            }, 100); // Majhna zamuda za stabilnost
         }
 
         // Prikaži odgovor
@@ -1126,7 +1336,9 @@
             const textElement = document.getElementById('response-text');
             const timeElement = document.getElementById('response-time');
             
-            // Skrajšaj dolg text
+            if (!display || !textElement || !timeElement) return;
+            
+            // Skrajšaj dolg text za prikaz
             const displayText = text.length > 150 ? text.substring(0, 150) + "..." : text;
             textElement.textContent = displayText;
             timeElement.textContent = sub;
