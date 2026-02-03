@@ -1,1093 +1,158 @@
-<!DOCTYPE html>
-<html lang="sl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>IRGO | Virtualna Asistentka 2026</title>
-    <!-- SheetJS za Excel file -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #000000;
-            color: #ffffff;
-            font-family: 'Inter', -apple-system, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-            cursor: none;
+<script>
+// CSS2D klase
+class CSS2DObject {
+    constructor(element = document.createElement('div')) {
+        this.element = element;
+        this.element.style.position = 'absolute';
+        this.element.style.pointerEvents = 'auto';
+        this.element.style.userSelect = 'none';
+        this.element.setAttribute('data-3d-object', 'true');
+        
+        // THREE.Object3D svojstva
+        this.position = new THREE.Vector3();
+        this.matrixWorld = new THREE.Matrix4();
+        this.visible = true;
+        this.parent = null;
+        this.children = [];
+    }
+    
+    add(object) {
+        this.children.push(object);
+        object.parent = this;
+    }
+    
+    traverse(callback) {
+        callback(this);
+        for (const child of this.children) {
+            child.traverse(callback);
         }
+    }
+}
 
-        .futuristic-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(0, 86, 166, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(255, 107, 0, 0.15) 0%, transparent 50%);
-            z-index: -2;
-        }
-
-        .quantum-field {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: -1;
-        }
-
-        .quantum-particle {
-            position: absolute;
-            width: 2px; height: 2px;
-            background: rgba(0, 174, 239, 0.8);
-            border-radius: 50%;
-            animation: quantum-float 15s infinite linear;
-        }
-
-        @keyframes quantum-float {
-            0% { transform: translate(0, 0); opacity: 0; }
-            10% { opacity: 1; }
-            100% { transform: translate(calc(100vw * var(--tx)), calc(-100vh * var(--ty))); opacity: 0; }
-        }
-
-        /* MAIN INTERFACE */
-        .container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            transition: opacity 0.8s ease;
-        }
-
-        .container.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .hologram-container {
-            position: relative;
-            width: 400px; height: 400px;
-            margin-bottom: 3rem;
-        }
-
-        .irgo-hologram {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 200px; height: 200px;
-            border-radius: 50%;
-            background: 
-                radial-gradient(circle at 30% 30%, 
-                    rgba(0, 174, 239, 0.9) 0%, 
-                    rgba(0, 86, 166, 0.6) 40%, 
-                    transparent 70%),
-                radial-gradient(circle at 70% 70%, 
-                    rgba(255, 107, 0, 0.7) 0%, 
-                    rgba(255, 140, 0, 0.3) 30%, 
-                    transparent 60%);
-            box-shadow: 
-                0 0 100px rgba(0, 174, 239, 0.6),
-                0 0 200px rgba(255, 107, 0, 0.3) inset;
-            z-index: 10;
-            animation: hologram-rotate 20s infinite linear;
-        }
-
-        .irgo-hologram.speaking {
-            animation: 
-                hologram-rotate 20s infinite linear,
-                hologram-pulse 0.8s infinite alternate,
-                hologram-color-shift 2s infinite alternate;
-            box-shadow: 
-                0 0 150px rgba(0, 174, 239, 0.8),
-                0 0 300px rgba(255, 107, 0, 0.4) inset,
-                0 0 50px rgba(255, 255, 255, 0.3);
-        }
-
-        @keyframes hologram-rotate {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        @keyframes hologram-pulse {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            100% { transform: translate(-50%, -50%) scale(1.15); }
-        }
-
-        @keyframes hologram-color-shift {
-            0% { 
-                filter: hue-rotate(0deg) brightness(1);
-            }
-            100% { 
-                filter: hue-rotate(10deg) brightness(1.2);
-            }
-        }
-
-        .irgo-ring {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid;
-            border-radius: 50%;
-            animation: ring-rotate 25s infinite linear reverse;
-        }
-
-        .ring-1 { 
-            width: 250px; height: 250px;
-            border-color: rgba(0, 174, 239, 0.4);
-            box-shadow: 0 0 30px rgba(0, 174, 239, 0.2);
+class CSS2DRenderer {
+    constructor() {
+        this.domElement = document.createElement('div');
+        this.domElement.style.overflow = 'hidden';
+        this.domElement.style.position = 'absolute';
+        this.domElement.style.top = '0';
+        this.domElement.style.left = '0';
+        this.domElement.style.pointerEvents = 'none';
+        
+        this.camera = null;
+        this.width = 0;
+        this.height = 0;
+        this.widthHalf = 0;
+        this.heightHalf = 0;
+        
+        this.vector = new THREE.Vector3();
+        this.viewMatrix = new THREE.Matrix4();
+        this.viewProjectionMatrix = new THREE.Matrix4();
+    }
+    
+    setSize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.widthHalf = width / 2;
+        this.heightHalf = height / 2;
+        
+        this.domElement.style.width = width + 'px';
+        this.domElement.style.height = height + 'px';
+    }
+    
+    render(scene, camera) {
+        this.camera = camera;
+        this.viewMatrix.copy(camera.matrixWorldInverse);
+        this.viewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, this.viewMatrix);
+        
+        // Očisti prethodne elemente
+        while (this.domElement.firstChild) {
+            this.domElement.removeChild(this.domElement.firstChild);
         }
         
-        .ring-2 { 
-            width: 300px; height: 300px;
-            border-color: rgba(255, 107, 0, 0.3);
-            box-shadow: 0 0 30px rgba(255, 107, 0, 0.2);
-            animation-delay: 0.5s;
-            animation-duration: 30s;
-        }
-
-        .ring-3 { 
-            width: 350px; height: 350px;
-            border-color: rgba(255, 140, 0, 0.2);
-            box-shadow: 0 0 20px rgba(255, 140, 0, 0.1);
-            animation-delay: 1s;
-            animation-duration: 35s;
-        }
-
-        @keyframes ring-rotate {
-            0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-            50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.05); }
-            100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
-        }
-
-        .irgo-button {
-            padding: 1.2rem 3rem;
-            background: linear-gradient(135deg, rgba(0, 86, 166, 0.2), rgba(0, 174, 239, 0.1));
-            border: 2px solid rgba(0, 174, 239, 0.4);
-            border-radius: 50px;
-            color: #ffffff;
-            font-size: 1.1rem;
-            letter-spacing: 2px;
-            font-weight: 500;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            z-index: 10;
-            margin-bottom: 3rem;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            box-shadow: 
-                0 5px 15px rgba(0, 86, 166, 0.2),
-                0 0 30px rgba(0, 174, 239, 0.1) inset;
-        }
-
-        .irgo-button:hover {
-            background: linear-gradient(135deg, rgba(0, 86, 166, 0.3), rgba(0, 174, 239, 0.2));
-            border-color: rgba(255, 107, 0, 0.6);
-            transform: translateY(-2px);
-            box-shadow: 
-                0 8px 25px rgba(0, 86, 166, 0.3),
-                0 0 40px rgba(255, 107, 0, 0.2) inset;
-        }
-
-        .voice-visualizer {
-            position: absolute;
-            bottom: 100px; left: 50%;
-            transform: translateX(-50%);
-            display: flex; gap: 4px; opacity: 0;
-        }
-
-        .voice-bar {
-            width: 4px; height: 20px;
-            background: linear-gradient(to top, rgba(0, 174, 239, 0.9), rgba(255, 107, 0, 0.7));
-            border-radius: 2px;
-            animation: voice-bar-pulse 0.5s infinite alternate;
-        }
-
-        @keyframes voice-bar-pulse { 
-            0% { transform: scaleY(0.3); } 
-            100% { transform: scaleY(1.2); } 
-        }
-
-        .response-display {
-            position: fixed; bottom: 3rem; left: 50%;
-            transform: translateX(-50%);
-            width: 80%; text-align: center; opacity: 0;
-            z-index: 100;
-            transition: opacity 0.5s;
-        }
-
-        .response-bubble {
-            background: linear-gradient(135deg, rgba(0, 86, 166, 0.2), rgba(0, 0, 0, 0.7));
-            border: 1px solid rgba(0, 174, 239, 0.3);
-            border-radius: 20px;
-            padding: 1.5rem 2rem;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .status-indicator {
-            position: fixed; top: 2rem; left: 2rem;
-            display: flex; align-items: center; gap: 0.75rem;
-        }
-
-        .status-dot { 
-            width: 10px; height: 10px; 
-            background: linear-gradient(135deg, #00ffaa, #00AEEF);
-            border-radius: 50%; 
-            box-shadow: 0 0 15px #00ffaa;
-            animation: status-pulse 2s infinite;
-        }
-
-        @keyframes status-pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        /* 3D NAVIGATION SCREEN */
-        #nav-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 5;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1s;
-        }
-
-        #nav-container.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        #nav-overlay {
-            position: absolute; 
-            top: 20px; 
-            width: 100%;
-            text-align: center; 
-            color: #00d2ff;
-            font-family: 'Segoe UI', sans-serif;
-            font-weight: bold; 
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px #00d2ff;
-            pointer-events: none; 
-            z-index: 10;
-        }
-
-        .room-label {
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            padding: 4px 10px;
-            background: rgba(0, 210, 255, 0.15);
-            border: 1px solid rgba(0, 210, 255, 0.5);
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            pointer-events: none;
-            text-shadow: 0 0 5px #000;
-            backdrop-filter: blur(2px);
-        }
-
-        .navigation-info {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, rgba(0, 86, 166, 0.9), rgba(0, 0, 0, 0.9));
-            padding: 1.5rem 2.5rem;
-            border-radius: 15px;
-            border: 1px solid rgba(0, 174, 239, 0.4);
-            text-align: center;
-            min-width: 350px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            z-index: 100;
-        }
-
-        .navigation-info h3 {
-            color: #00AEEF;
-            margin-bottom: 0.5rem;
-            font-size: 1.3rem;
-        }
-
-        .back-button {
-            position: fixed;
-            top: 2rem;
-            right: 2rem;
-            padding: 0.75rem 2rem;
-            background: linear-gradient(135deg, rgba(0, 86, 166, 0.3), rgba(0, 174, 239, 0.2));
-            border: 1px solid rgba(0, 174, 239, 0.4);
-            border-radius: 25px;
-            color: white;
-            cursor: pointer;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            display: none;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-
-        .back-button:hover {
-            background: linear-gradient(135deg, rgba(0, 86, 166, 0.4), rgba(255, 107, 0, 0.3));
-            border-color: rgba(255, 107, 0, 0.6);
-            transform: translateY(-2px);
-        }
-
-        .back-button.visible {
-            display: block;
-        }
-
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s;
-        }
-
-        .loading-screen.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 4px solid rgba(0, 174, 239, 0.2);
-            border-top: 4px solid #00AEEF;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 2rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .irgo-logo {
-            position: fixed;
-            top: 2rem;
-            right: 2rem;
-            font-size: 1.5rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #00AEEF, #FF6B00);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
-            z-index: 100;
-        }
-
-        .loading-status {
-            position: fixed;
-            bottom: 4rem;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            color: #00AEEF;
-            font-size: 1rem;
-            z-index: 100;
-        }
-    </style>
-</head>
-<body>
-    <div class="futuristic-bg"></div>
-    <div class="quantum-field" id="quantum-field"></div>
-    <div class="irgo-logo">IRGO</div>
-
-    <!-- Loading Screen -->
-    <div class="loading-screen" id="loading-screen">
-        <div class="loading-spinner"></div>
-        <div style="color: #00AEEF; font-size: 1.2rem; margin-top: 1rem;">Nalagam IRGO sistem...</div>
-        <div class="loading-status" id="loading-status"></div>
-    </div>
-
-    <!-- Main Interface -->
-    <div class="container" id="main-container">
-        <div class="status-indicator">
-            <div class="status-dot"></div>
-            <div class="status-text" id="status-text">SISTEM ONLINE</div>
-        </div>
-
-        <div class="hologram-container">
-            <div class="irgo-ring ring-1"></div>
-            <div class="irgo-ring ring-2"></div>
-            <div class="irgo-ring ring-3"></div>
-            
-            <div class="irgo-hologram" id="irgo-hologram"></div>
-        </div>
-
-        <div class="voice-visualizer" id="voice-visualizer">
-            <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
-            <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
-            <div class="voice-bar"></div><div class="voice-bar"></div>
-        </div>
-
-        <button class="irgo-button" id="assist-button">
-            <span style="color: #00AEEF;">PRIŠEL/LA</span> 
-            <span style="color: #FF6B00; margin: 0 10px;">|</span>
-            <span style="color: #FFFFFF;">SEM NA SASTANEK</span>
-        </button>
-
-        <div class="response-display" id="response-display">
-            <div class="response-bubble">
-                <div id="response-text">IRGO sistem se pripravlja. Nalagam podatke...</div>
-                <div id="response-time" style="font-size: 0.9rem; color: rgba(0, 174, 239, 0.7); margin-top: 10px;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navigation Screen -->
-    <div id="nav-container">
-        <div id="nav-overlay">IRGO- Navigator</div>
-        <div id="navigation-info" class="navigation-info">
-            <h3>IRGO NAVIGACIJA</h3>
-            <p style="color: #00AEEF; margin: 10px 0;" id="nav-guest-name"><strong>Nalagam podatke...</strong></p>
-            <p style="margin: 5px 0;">Soba: <strong id="nav-room">102</strong> <span id="nav-room-name">(Sejna soba)</span></p>
-            <p style="margin: 5px 0;">Čas: <strong id="nav-time">09:00</strong></p>
-            <p style="margin: 10px 0; font-size: 0.9rem;" id="nav-description">Navigacija v pripravi</p>
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0, 174, 239, 0.3);">
-                <p id="nav-instruction">Sledite rdečim puščicam na 3D modelu</p>
-            </div>
-        </div>
-    </div>
-
-    <button class="back-button" id="back-button">← Nazaj na začetek</button>
-
-    <!-- Three.js Import -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/"
-            }
-        }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'https://unpkg.com/three@0.162.0/examples/jsm/loaders/GLTFLoader.js';
-        import { OrbitControls } from 'https://unpkg.com/three@0.162.0/examples/jsm/controls/OrbitControls.js';
-        import { CSS2DRenderer, CSS2DObject } from 'https://unpkg.com/three@0.162.0/examples/jsm/renderers/CSS2DRenderer.js';
-
-        // Globalne spremenljivke
-        let scene, camera, renderer, controls, labelRenderer;
-        let isNavigationActive = false;
-        let animationSpeed = 0.0006;
-        let currentGuest = null;
-        let excelData = null;
-        let femaleVoice = null;
-        
-        // Barve po IRGO shemi
-        const IRGO_COLORS = {
-            blue: 0x00AEEF,
-            darkBlue: 0x0056A6,
-            orange: 0xFF6B00,
-            lightOrange: 0xFF8C00
-        };
-
-        // Inicializacija
-        async function init() {
-            console.log("IRGO sistem se zaganja...");
-            initParticles();
-            
-            // Event listeners
-            document.getElementById('assist-button').addEventListener('click', handleArrival);
-            document.getElementById('back-button').addEventListener('click', backToMain);
-            
-            // Začni z nalaganjem sistema
-            showLoading(true);
-            
-            try {
-                // 1. Naloži Excel podatke iz Google Sheets
-                await loadExcelFromGoogleSheets();
+        scene.traverse(obj => {
+            if (obj instanceof CSS2DObject && obj.visible) {
+                this.vector.setFromMatrixPosition(obj.matrixWorld || new THREE.Matrix4());
+                this.vector.applyMatrix4(this.viewProjectionMatrix);
                 
-                // 2. Inicializiraj 3D navigacijsko sceno (GLB se naloži avtomatsko)
-                await initNavigationScene();
+                const x = (this.vector.x * this.widthHalf) + this.widthHalf;
+                const y = -(this.vector.y * this.heightHalf) + this.heightHalf;
                 
-                // 3. Setup za govor
-                await setupSpeechSynthesis();
-                
-                // 4. Sistem pripravljen
-                showLoading(false);
-                speak("IRGO sistem pripravljen. Dobrodošli v IRGO navigacijskem sistemu.", "IRGO", 0.95);
-                showResponse("IRGO sistem pripravljen. Kliknite 'PRIŠEL SEM NA SASTANEK' za navigacijo.", "Sistem ONLINE");
-                
-            } catch (error) {
-                console.error("Napaka pri inicializaciji:", error);
-                showLoading(false);
-                speak("Napaka pri inicializaciji sistema. Prosimo, osvežite stran.", "IRGO");
-            }
-        }
-
-        // Quantum particles
-        function initParticles() {
-            const field = document.getElementById('quantum-field');
-            for(let i=0; i<50; i++) {
-                const p = document.createElement('div');
-                p.className = 'quantum-particle';
-                p.style.left = Math.random()*100+'%';
-                p.style.top = Math.random()*100+'%';
-                p.style.setProperty('--tx', (Math.random()-0.5)*2);
-                p.style.setProperty('--ty', (Math.random()-0.5)*2);
-                p.style.animationDuration = (Math.random()*10+10)+'s';
-                
-                if (Math.random() > 0.5) {
-                    p.style.background = `rgba(0, 174, 239, ${0.6 + Math.random()*0.4})`;
-                } else {
-                    p.style.background = `rgba(255, 107, 0, ${0.6 + Math.random()*0.4})`;
-                }
-                
-                field.appendChild(p);
-            }
-        }
-
-        // Naloži Excel iz Google Sheets
-        async function loadExcelFromGoogleSheets() {
-            const googleSheetsURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTb2vXjHonrmW76nr7NNwjmTwxcp9DpjiutVcY3Y803LYC_xSnECcQcDnUw0rEYqK9ydUWCVaVnZ7nq/pub?output=csv';
-            
-            updateLoadingStatus("Nalagam podatke sestankov...");
-            
-            try {
-                const response = await fetch(googleSheetsURL);
-                const csvText = await response.text();
-                
-                // Pretvori CSV v JSON
-                const rows = csvText.split('\n');
-                const headers = rows[0].split(',');
-                const data = [];
-                
-                for(let i = 1; i < rows.length; i++) {
-                    if(rows[i].trim() === '') continue;
+                if (this.vector.z > -1 && this.vector.z < 1) {
+                    obj.element.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+                    obj.element.style.zIndex = Math.floor((1 - this.vector.z) * 100000);
+                    obj.element.style.display = 'block';
                     
-                    const cells = rows[i].split(',');
-                    if(cells.length >= 5) {
-                        data.push({
-                            ime: cells[0]?.trim() || '',
-                            soba: cells[1]?.trim() || '',
-                            projekt: cells[2]?.trim() || '',
-                            opis: cells[3]?.trim() || '',
-                            vrijeme: cells[4]?.trim() || ''
-                        });
+                    if (!obj.element.parentNode || obj.element.parentNode !== this.domElement) {
+                        this.domElement.appendChild(obj.element);
                     }
-                }
-                
-                excelData = data;
-                console.log("Podatki naloženi iz Google Sheets:", data);
-                
-                if(data.length > 0) {
-                    console.log(`Najdenih ${data.length} terminov.`);
                 } else {
-                    // Dodaj testne podatke če je Excel prazen
-                    excelData = [
-                        { ime: "Janez Novak", soba: "102", projekt: "IRGO Mobile", opis: "Mesečno srečanje", vrijeme: "09:00" },
-                        { ime: "Ana Kovač", soba: "103", projekt: "Smart Office", opis: "Delavnica IoT", vrijeme: "10:30" },
-                        { ime: "Marko Petek", soba: "202", projekt: "AI Assistant", opis: "Predstavitev demo", vrijeme: "11:45" }
-                    ];
-                    console.log("Uporabljam testne podatke.");
-                }
-                
-            } catch (error) {
-                console.error("Napaka pri nalaganju podatkov:", error);
-                // Uporabi testne podatke če je napaka
-                excelData = [
-                    { ime: "Janez Novak", soba: "102", projekt: "IRGO Mobile", opis: "Mesečno srečanje", vrijeme: "09:00" },
-                    { ime: "Ana Kovač", soba: "103", projekt: "Smart Office", opis: "Delavnica IoT", vrijeme: "10:30" },
-                    { ime: "Marko Petek", soba: "202", projekt: "AI Assistant", opis: "Predstavitev demo", vrijeme: "11:45" },
-                    { ime: "Maja Horvat", soba: "203", projekt: "VR Training", opis: "Usposabljanje", vrijeme: "14:00" }
-                ];
-                console.log("Uporabljam testne podatke zaradi napake.");
-            }
-        }
-
-        // Inicializiraj 3D navigacijsko sceno
-        async function initNavigationScene() {
-            updateLoadingStatus("Pripravljam 3D navigacijo...");
-            
-            try {
-                // Ustvari sceno
-                scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x00050a);
-                
-                // Kamera
-                camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.5, 1000);
-                camera.position.set(15, 12, 12);
-                
-                // WebGL Renderer
-                renderer = new THREE.WebGLRenderer({ 
-                    antialias: true, 
-                    alpha: true,
-                    powerPreference: "high-performance"
-                });
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                document.getElementById('nav-container').appendChild(renderer.domElement);
-                
-                // CSS2D Renderer za oznake
-                labelRenderer = new CSS2DRenderer();
-                labelRenderer.setSize(window.innerWidth, window.innerHeight);
-                labelRenderer.domElement.style.position = 'absolute';
-                labelRenderer.domElement.style.top = '0px';
-                labelRenderer.domElement.style.pointerEvents = 'none';
-                document.getElementById('nav-container').appendChild(labelRenderer.domElement);
-                
-                // Orbit kontrole
-                controls = new OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-                controls.dampingFactor = 0.05;
-                controls.minDistance = 5;
-                controls.maxDistance = 50;
-                
-                // Svetloba
-                scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-                const dirLight = new THREE.DirectionalLight(0x00aaff, 1.2);
-                dirLight.position.set(10, 20, 10);
-                scene.add(dirLight);
-                
-                // Naloži model iz GitHub
-                updateLoadingStatus("Nalagam 3D model...");
-                await loadHouseModel('https://raw.githubusercontent.com/Stroteh/Navigator/main/hisa.glb');
-                
-                // Dodaj navigacijsko pot
-                createNavigationPath();
-                
-                // Animacijska zanka
-                function animate() {
-                    requestAnimationFrame(animate);
-                    controls.update();
-                    renderer.render(scene, camera);
-                    labelRenderer.render(scene, camera);
-                    
-                    // Animacija puščic
-                    if (window.arrowTexture) {
-                        window.arrowTexture.offset.x -= animationSpeed;
-                    }
-                    
-                    // Animacija kroglice
-                    if (window.ball && window.curve) {
-                        window.t = (window.t || 0) + animationSpeed;
-                        if (window.t > 1) window.t = 0;
-                        window.ball.position.copy(window.curve.getPointAt(window.t));
-                    }
-                }
-                animate();
-                
-                // Resize handler
-                window.addEventListener('resize', () => {
-                    camera.aspect = window.innerWidth / window.innerHeight;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(window.innerWidth, window.innerHeight);
-                    labelRenderer.setSize(window.innerWidth, window.innerHeight);
-                });
-                
-                console.log("3D navigacija pripravljena.");
-                
-            } catch (error) {
-                console.error("Napaka pri inicializaciji navigacijske scene:", error);
-                throw error;
-            }
-        }
-
-        // Naloži hišni model iz GitHub
-        async function loadHouseModel(url) {
-            return new Promise((resolve, reject) => {
-                const loader = new GLTFLoader();
-                
-                loader.load(url, (gltf) => {
-                    gltf.scene.traverse((child) => {
-                        if (child.isMesh) {
-                            // X-Ray efekt
-                            child.material = new THREE.MeshPhongMaterial({
-                                color: 0x00ffff, 
-                                transparent: true, 
-                                opacity: 0.15, 
-                                side: THREE.DoubleSide, 
-                                depthWrite: false
-                            });
-                            
-                            // Dodaj obrobe
-                            const edges = new THREE.EdgesGeometry(child.geometry);
-                            child.add(new THREE.LineSegments(
-                                edges, 
-                                new THREE.LineBasicMaterial({ 
-                                    color: 0x00ffff, 
-                                    transparent: true, 
-                                    opacity: 0.6 
-                                })
-                            ));
-                            
-                            // Osvetli sejno sobo
-                            if (child.name === '3D_Solid011' || child.name.toLowerCase().includes('sejna')) {
-                                child.material.color.set(0xff5500);
-                                child.material.opacity = 0.5;
-                                child.material.emissive = new THREE.Color(0xff5500);
-                                child.material.emissiveIntensity = 0.4;
-                            }
-                        }
-                    });
-                    
-                    scene.add(gltf.scene);
-                    
-                    // Dodaj oznake za sobe
-                    addRoomLabels();
-                    
-                    resolve();
-                }, undefined, (error) => {
-                    console.error("Napaka pri nalaganju modela:", error);
-                    reject(error);
-                });
-            });
-        }
-
-        // Dodaj oznake za sobe
-        function addRoomLabels() {
-            const rooms = [
-                { name: 'Sejna soba', x: -8.00, y: 6.73, z: -9.00 },
-                { name: 'Tajništvo', x: 2, y: 6, z: -12.98 },
-                { name: 'Tajništvo', x: -9.55, y: 6.62, z: -14.10 },
-                { name: 'Kuhinja', x: -9.03, y: 6.27, z: -19.24 },
-                { name: 'Toalet', x: -2.39, y: 6.44, z: -19.84 },
-                { name: 'Vhod', x: 0.00, y: 0.0, z: -6.00 }
-            ];
-            
-            rooms.forEach(room => {
-                const div = document.createElement('div');
-                div.className = 'room-label';
-                div.innerHTML = `<strong>${room.name}</strong>`;
-                const label = new CSS2DObject(div);
-                label.position.set(room.x, room.y + 1, room.z);
-                scene.add(label);
-            });
-        }
-
-        // Ustvari navigacijsko pot
-        function createNavigationPath() {
-            // Točke poti do sejne sobe
-            const pathPoints = [
-                new THREE.Vector3(-1.56, 0.15, -6.03), 
-                new THREE.Vector3(-2.80, 0.15, -5.70), 
-                new THREE.Vector3(-3.95, 0.15, -5.00), 
-                new THREE.Vector3(-4.20, 0.35, -4.50), 
-                new THREE.Vector3(-4.25, 0.60, -3.80), 
-                new THREE.Vector3(-4.20, 1.00, -3.10), 
-                new THREE.Vector3(-4.10, 1.50, -2.40), 
-                new THREE.Vector3(-4.08, 1.80, -1.80), 
-                new THREE.Vector3(-3.95, 2.07, -1.20), 
-                new THREE.Vector3(-3.80, 2.07, -0.80), 
-                new THREE.Vector3(-3.20, 2.07, -0.65), 
-                new THREE.Vector3(-2.60, 2.07, -0.75), 
-                new THREE.Vector3(-2.35, 2.20, -1.30), 
-                new THREE.Vector3(-2.45, 2.65, -2.10), 
-                new THREE.Vector3(-2.40, 3.00, -2.90), 
-                new THREE.Vector3(-2.38, 3.45, -3.70), 
-                new THREE.Vector3(-2.45, 3.80, -4.50), 
-                new THREE.Vector3(-2.90, 3.94, -5.40), 
-                new THREE.Vector3(-3.50, 3.94, -6.30), 
-                new THREE.Vector3(-4.50, 3.94, -7.40), 
-                new THREE.Vector3(-5.60, 3.94, -8.50), 
-                new THREE.Vector3(-6.04, 3.94, -8.78)
-            ];
-            
-            // Ustvari krivuljo
-            window.curve = new THREE.CatmullRomCurve3(pathPoints);
-            
-            // Ustvari teksturo puščic
-            window.arrowTexture = createArrowTexture();
-            
-            // Ustvari cev (pot) z puščicama
-            const tubeGeo = new THREE.TubeGeometry(window.curve, 110, 0.4, 8, false);
-            const tubeMat = new THREE.MeshBasicMaterial({ 
-                map: window.arrowTexture, 
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthTest: false
-            });
-            const pathMesh = new THREE.Mesh(tubeGeo, tubeMat);
-            pathMesh.renderOrder = 999;
-            scene.add(pathMesh);
-            
-            // Ustvari kroglo za animacijo
-            const ballGeometry = new THREE.SphereGeometry(0.14, 16, 16);
-            const ballMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xffffff, 
-                depthTest: false 
-            });
-            window.ball = new THREE.Mesh(ballGeometry, ballMaterial);
-            window.ball.renderOrder = 1000;
-            scene.add(window.ball);
-        }
-
-        // Ustvari teksturo puščic
-        function createArrowTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; 
-            canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            
-            ctx.clearRect(0, 0, 256, 128);
-            ctx.fillStyle = '#ff0055';
-
-            // Risanje klasične puščice
-            ctx.fillRect(20, 54, 140, 20);
-            ctx.beginPath();
-            ctx.moveTo(160, 24);
-            ctx.lineTo(230, 64);
-            ctx.lineTo(160, 104);
-            ctx.fill();
-
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.repeat.set(3, 2);
-            return texture;
-        }
-
-        // Setup za govor - čakanje na glasove
-        async function setupSpeechSynthesis() {
-            return new Promise((resolve) => {
-                // Če so glasovi že naloženi
-                const voices = speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    findFemaleSlovenianVoice();
-                    resolve();
-                } else {
-                    // Čakamo, da se glasovi naložijo
-                    speechSynthesis.addEventListener('voiceschanged', () => {
-                        findFemaleSlovenianVoice();
-                        resolve();
-                    });
-                }
-            });
-        }
-
-        // Najdi ženskega slovenskega glas "Petra"
-        function findFemaleSlovenianVoice() {
-            const voices = speechSynthesis.getVoices();
-            console.log("Dostopni glasovi:");
-            voices.forEach(voice => {
-                console.log(`Ime: ${voice.name}, Jezik: ${voice.lang}`);
-            });
-
-            // Iskanje slovenskega ženskega glasu - prioriteta: Petra, nato ostali slovenski ženski
-            const slovenianFemaleVoices = voices.filter(voice => 
-                voice.lang.startsWith('sl') && 
-                (voice.name.includes('Petra') || 
-                 voice.name.includes('Vesna') || 
-                 voice.name.includes('Alenka') ||
-                 voice.name.includes('Lado') ||
-                 voice.name.toLowerCase().includes('female') ||
-                 voice.name.includes('žensk') ||
-                 voice.name.includes('Žensk'))
-            );
-
-            if (slovenianFemaleVoices.length > 0) {
-                // Dajemo prioritetu Petrinemu glasu
-                const petraVoice = slovenianFemaleVoices.find(v => v.name.includes('Petra'));
-                if (petraVoice) {
-                    femaleVoice = petraVoice;
-                    console.log("Najden ženski slovenski glas PETRA:", femaleVoice.name);
-                } else {
-                    femaleVoice = slovenianFemaleVoices[0];
-                    console.log("Najden ženski slovenski glas:", femaleVoice.name);
-                }
-            } else {
-                // Če ni slovenskega, poišči angleški ženski glas
-                const englishFemaleVoices = voices.filter(voice => 
-                    (voice.lang.startsWith('en') || voice.lang.includes('en-US') || voice.lang.includes('en-GB')) && 
-                    (voice.name.toLowerCase().includes('female') ||
-                     voice.name.includes('Microsoft Zira') ||
-                     voice.name.includes('Google UK Female') ||
-                     voice.name.includes('Google US Female'))
-                );
-                
-                if (englishFemaleVoices.length > 0) {
-                    femaleVoice = englishFemaleVoices[0];
-                    console.log("Najden angleški ženski glas:", femaleVoice.name);
-                } else if (voices.length > 0) {
-                    // Uporabi prvi dostopen glas
-                    femaleVoice = voices[0];
-                    console.log("Uporabljam privzeti glas:", femaleVoice.name);
+                    obj.element.style.display = 'none';
                 }
             }
-        }
+        });
+    }
+}
 
-        // Glavna logika za prihod
-        async function handleArrival() {
-            // Preveri podatke
-            if (!excelData || excelData.length === 0) {
-                speak("Napaka: Podatki o sestankih niso na voljo. Prosimo, osvežite stran.", "IRGO");
-                return;
-            }
-            
-            try {
-                showResponse("IRGO išče vaš termin...", "Iskanje");
-                
-                const sad = new Date();
-                const trenutnoMin = sad.getHours() * 60 + sad.getMinutes();
-                
-                let najboljiGost = null;
-                let minRazlika = Infinity;
-                
-                // Poišči najbližji termin
-                excelData.forEach(gost => {
-                    if (!gost.vrijeme) return;
-                    
-                    const timeStr = gost.vrijeme.toString();
-                    const timeParts = timeStr.split(':');
-                    if (timeParts.length < 2) return;
-                    
-                    const h = parseInt(timeParts[0], 10);
-                    const m = parseInt(timeParts[1], 10);
-                    
-                    if (isNaN(h) || isNaN(m)) return;
-                    
-                    const planMin = h * 60 + m;
-                    const razlika = Math.abs(trenutnoMin - planMin);
-                    
-                    // Iščemo termin v roku 2 ur
-                    if (razlika < 120 && razlika < minRazlika) {
-                        minRazlika = razlika;
-                        najboljiGost = gost;
-                    }
-                });
+// Globalne varijable
+let scene, camera, renderer, controls, labelRenderer;
+let isNavigationActive = false;
+let animationSpeed = 0.0006;
+let currentGuest = null;
+let excelData = null;
+let femaleVoice = null;
 
-                if (najboljiGost) {
-                    currentGuest = najboljiGost;
-                    showNavigation(najboljiGost);
-                } else {
-                    // Če ni najden termin, uporabi prvi testni
-                    currentGuest = excelData[0];
-                    showNavigation(excelData[0]);
-                }
-            } catch (e) {
-                console.error("Napaka:", e);
-                speak("Napaka pri obdelavi podatkov. Uporabljam privzeti termin.", "IRGO");
-                // Uporabi prvi termin če je napaka
-                if (excelData && excelData.length > 0) {
-                    currentGuest = excelData[0];
-                    showNavigation(excelData[0]);
-                }
-            }
-        }
+// Barve IRGO sheme
+const IRGO_COLORS = {
+    blue: 0x00AEEF,
+    darkBlue: 0x0056A6,
+    orange: 0xFF6B00,
+    lightOrange: 0xFF8C00
+};
 
-            // Funkcije za pravilno izgovorjavo številk v slovenščini
+// Slovenian numbers pronunciation - POBOLJŠANA VERZIJA
 const slovenianNumbers = {
     ones: ['', 'ena', 'dve', 'tri', 'štiri', 'pet', 'šest', 'sedem', 'osem', 'devet'],
     teens: ['deset', 'enajst', 'dvanajst', 'trinajst', 'štirinajst', 'petnajst', 'šestnajst', 'sedemnajst', 'osemnajst', 'devetnajst'],
     tens: ['', '', 'dvajset', 'trideset', 'štirideset', 'petdeset', 'šestdeset', 'sedemdeset', 'osemdeset', 'devetdeset'],
     hundreds: ['', 'sto', 'dvesto', 'tristo', 'štiristo', 'petsto', 'šeststo', 'sedemsto', 'osemsto', 'devetsto'],
     
-    // Pretvori številko v besedno obliko (za sobe 100-999)
-    convertRoomNumber: function(num) {
-        // Če je številka niz, ga pretvori v število
-        const number = parseInt(num);
-        
-        if (isNaN(number)) return num; // Če ni številka, vrni original
-        
-        // Poseben primer za 0
-        if (number === 0) return 'nič';
-        
-        // Za številke manjše od 100
-        if (number < 10) return this.ones[number];
-        if (number < 20) return this.teens[number - 10];
-        if (number < 100) {
-            const tens = Math.floor(number / 10);
-            const ones = number % 10;
-            if (ones === 0) return this.tens[tens];
-            return this.ones[ones] + 'in' + this.tens[tens];
-        }
-        
-        // Za številke 100-999
-        if (number < 1000) {
-            const hundreds = Math.floor(number / 100);
-            const remainder = number % 100;
-            
-            let result = this.hundreds[hundreds];
-            
-            if (remainder > 0) {
-                // Za številke 101-109: "sto ena", "sto dve", itd.
-                if (remainder < 10) {
-                    result += ' ' + this.ones[remainder];
-                }
-                // Za številke 110-119
-                else if (remainder < 20) {
-                    result += ' ' + this.teens[remainder - 10];
-                }
-                // Za ostale
-                else {
-                    const tens = Math.floor(remainder / 10);
-                    const ones = remainder % 10;
-                    if (ones === 0) {
-                        result += ' ' + this.tens[tens];
-                    } else {
-                        result += ' ' + this.ones[ones] + 'in' + this.tens[tens];
-                    }
-                }
-            }
-            
-            return result;
-        }
-        
-        // Za večje številke (če bi jih potrebovali)
-        return number.toString();
-    },
-    
-    // Pravilna izgovorjava v kontekstu sob (po slovenski navadi)
     pronounceRoomNumber: function(roomNumber) {
         const num = parseInt(roomNumber);
         
-        // Za dvomestne sobe (10-99) - izgovarjamo "deset", "enajst", itd.
-        if (num >= 10 && num < 100) {
-            if (num < 20) {
-                return this.teens[num - 10];
-            } else {
-                const tens = Math.floor(num / 10);
-                const ones = num % 10;
-                if (ones === 0) {
-                    return this.tens[tens];
-                }
-                return this.ones[ones] + 'in' + this.tens[tens];
-            }
+        if (isNaN(num)) return roomNumber;
+        
+        // Posebni primeri
+        if (num === 0) return 'nič';
+        if (num < 10) return this.ones[num];
+        if (num < 20) return this.teens[num - 10];
+        
+        // Dvomestne številke
+        if (num < 100) {
+            const tens = Math.floor(num / 10);
+            const ones = num % 10;
+            if (ones === 0) return this.tens[tens];
+            // Posebna pravila za sestavljanje: 21 = "enaindvajset", ne "ena in dvajset"
+            return this.ones[ones] + 'in' + this.tens[tens];
         }
         
-        // Za trištevilčne sobe (100-999)
-        if (num >= 100 && num < 1000) {
+        // Trimestne številke
+        if (num < 1000) {
             const hundreds = Math.floor(num / 100);
             const remainder = num % 100;
             
-            // Posebni primeri, ki jih izgovarjamo drugače:
-            switch(num) {
-                case 100: return 'sto';
-                case 200: return 'dvesto';
-                case 300: return 'tristo';
-                case 400: return 'štiristo';
-                case 500: return 'petsto';
-                case 600: return 'šeststo';
-                case 700: return 'sedemsto';
-                case 800: return 'osemsto';
-                case 900: return 'devetsto';
+            // Posebni primeri za okrogle številke
+            if (remainder === 0) {
+                return this.hundreds[hundreds];
             }
             
             let result = this.hundreds[hundreds];
             
             if (remainder > 0) {
                 if (remainder < 10) {
-                    // Za 101-109: "sto ena", "sto dve"
+                    // 101, 102, ...
                     result += ' ' + this.ones[remainder];
                 } else if (remainder < 20) {
-                    // Za 110-119: "sto deset", "sto enajst"
+                    // 110, 111, ...
                     result += ' ' + this.teens[remainder - 10];
                 } else {
                     const tens = Math.floor(remainder / 10);
@@ -1103,275 +168,781 @@ const slovenianNumbers = {
             return result;
         }
         
-        // Za ostale primere
-        return this.convertRoomNumber(roomNumber);
+        return num.toString();
     }
 };
 
-// Testni primeri - lahko odstraniš kasneje
-console.log("Test izgovorjave:");
-console.log("102 ->", slovenianNumbers.pronounceRoomNumber("102")); // "sto dve"
-console.log("101 ->", slovenianNumbers.pronounceRoomNumber("101")); // "sto ena"
-console.log("110 ->", slovenianNumbers.pronounceRoomNumber("110")); // "sto deset"
-console.log("115 ->", slovenianNumbers.pronounceRoomNumber("115")); // "sto petnajst"
-console.log("123 ->", slovenianNumbers.pronounceRoomNumber("123")); // "sto triindvajset"
-console.log("201 ->", slovenianNumbers.pronounceRoomNumber("201")); // "dvesto ena"
-console.log("250 ->", slovenianNumbers.pronounceRoomNumber("250")); // "dvesto petdeset"
-console.log("11 ->", slovenianNumbers.pronounceRoomNumber("11")); // "enajst"
-console.log("25 ->", slovenianNumbers.pronounceRoomNumber("25")); // "petindvajset"
+// Inicijalizacija
+async function init() {
+    console.log("IRGO sistem se zaganja...");
+    initParticles();
+    
+    // Event listeners
+    document.getElementById('assist-button').addEventListener('click', handleArrival);
+    document.getElementById('back-button').addEventListener('click', backToMain);
+    
+    // Začni z nalaganjem sistema
+    showLoading(true);
+    
+    try {
+        // 1. Naloži Excel podatke iz Google Sheets
+        await loadExcelFromGoogleSheets();
+        
+        // 2. Inicializiraj 3D navigacijsko sceno
+        await initNavigationScene();
+        
+        // 3. Setup za govor - posebna pažnja za tablet
+        await setupSpeechSynthesisForTablet();
+        
+        // 4. Sistem pripravljen
+        showLoading(false);
+        speak("IRGO sistem pripravljen. Dobrodošli v IRGO navigacijskem sistemu.", "IRGO", 0.95);
+        showResponse("IRGO sistem pripravljen. Kliknite 'PRIŠEL SEM NA SASTANEK' za navigacijo.", "Sistem ONLINE");
+        
+    } catch (error) {
+        console.error("Napaka pri inicializaciji:", error);
+        showLoading(false);
+        speak("Napaka pri inicializaciji sistema. Prosimo, osvežite stran.", "IRGO");
+    }
+}
 
-
-
-
-
-        // Prikaži navigacijo
-        function showNavigation(guest) {
-            // Skrij glavni vmesnik
-            document.getElementById('main-container').classList.add('hidden');
-            
-            // Prikaži navigacijski vmesnik
-            document.getElementById('nav-container').classList.add('active');
-            document.getElementById('back-button').classList.add('visible');
-            
-            // Posodobi informacije o gostu
-            document.getElementById('nav-guest-name').innerHTML = `<strong>${guest.ime}</strong>`;
-            document.getElementById('nav-room').textContent = guest.soba;
-            document.getElementById('nav-room-name').textContent = `(${getRoomDescription(guest.soba)})`;
-            document.getElementById('nav-time').textContent = guest.vrijeme;
-            document.getElementById('nav-description').textContent = `${guest.projekt}: ${guest.opis}`;
-            
-            // Začni z govorom in navigacijo
-            setTimeout(() => {
-                startNavigationSpeech(guest);
-            }, 500);
-            
-            // Aktiviraj fullscreen za boljšo izkušnjo na tabličnem računalniku
-            if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(e => console.log(e));
-            }
+// Quantum particles
+function initParticles() {
+    const field = document.getElementById('quantum-field');
+    for(let i=0; i<50; i++) {
+        const p = document.createElement('div');
+        p.className = 'quantum-particle';
+        p.style.left = Math.random()*100+'%';
+        p.style.top = Math.random()*100+'%';
+        p.style.setProperty('--tx', (Math.random()-0.5)*2);
+        p.style.setProperty('--ty', (Math.random()-0.5)*2);
+        p.style.animationDuration = (Math.random()*10+10)+'s';
+        
+        if (Math.random() > 0.5) {
+            p.style.background = `rgba(0, 174, 239, ${0.6 + Math.random()*0.4})`;
+        } else {
+            p.style.background = `rgba(255, 107, 0, ${0.6 + Math.random()*0.4})`;
         }
+        
+        field.appendChild(p);
+    }
+}
 
-        // Začni z govorom navigacije
-        function startNavigationSpeech(guest) {
-            const roomDescription = getRoomDescription(guest.soba);
-            const now = new Date();
-            const currentTime = now.getHours() * 60 + now.getMinutes();
-            const [h, m] = guest.vrijeme.split(':').map(Number);
-            const meetingTime = h * 60 + m;
-            const timeDifference = currentTime - meetingTime;
+// Naloži Excel iz Google Sheets
+async function loadExcelFromGoogleSheets() {
+    const googleSheetsURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTb2vXjHonrmW76nr7NNwjmTwxcp9DpjiutVcY3Y803LYC_xSnECcQcDnUw0rEYqK9ydUWCVaVnZ7nq/pub?output=csv';
+    
+    updateLoadingStatus("Nalagam podatke sestankov...");
+    
+    try {
+        const response = await fetch(googleSheetsURL);
+        const csvText = await response.text();
+        
+        const rows = csvText.split('\n');
+        const data = [];
+        
+        for(let i = 1; i < rows.length; i++) {
+            if(rows[i].trim() === '') continue;
             
-            let greeting = `Pozdravljeni, ${guest.ime}. `;
-            
-            // Dodaj časovni komentar (prijazen za zgodnje/kasne)
-            if (timeDifference < -15) {
-                greeting += `Vidim, da ste prišli celih ${Math.abs(timeDifference)} minut prej. Odlično, imate čas za kavo! `;
-                animationSpeed = 0.0003; // Počasneje - uživajte v poti
-                document.getElementById('nav-instruction').textContent = "Imate čas, sledite puščicam v miru";
-            } else if (timeDifference < -5) {
-                greeting += `Prišli ste približno ${Math.abs(timeDifference)} minut prej. Dobro načrtovanje! `;
-                animationSpeed = 0.0004;
-                document.getElementById('nav-instruction').textContent = "Sledite puščicam do sejne sobe";
-            } else if (timeDifference > 15) {
-                greeting += `Prišli ste približno ${timeDifference} minut kasneje. Nič ne skrbite, vsi smo imeli te dni. `;
-                greeting += `Počutite se sproščeno, hitro vas popeljem do sobe. `;
-                animationSpeed = 0.0008; // Hitreje - hitite
-                document.getElementById('nav-instruction').textContent = "Hitro sledite puščicam do sejne sobe";
-            } else if (timeDifference > 5) {
-                greeting += `Prišli ste približno ${timeDifference} minut kasneje. Hitro vas popeljem do sobe. `;
-                animationSpeed = 0.0007;
-                document.getElementById('nav-instruction').textContent = "Hitro sledite puščicam";
-            } else {
-                greeting += `Prišli ste točno ob pravem času. Odlično! `;
-                animationSpeed = 0.0006; // Standardno
-                document.getElementById('nav-instruction').textContent = "Sledite puščicam do sejne sobe";
-            }
-            
-            const roomNumberSpoken = slovenianNumbers.pronounceRoomNumber(guest.soba);
-            const navigation = `Vaš sestanek je v sobi številka ${roomNumberSpoken}. To je ${roomDescription}. `;
-            const instructions = `Sledite rdečim puščicam na zaslonu. Vodi vas do sejne sobe. `;
-            const details = `Sestanek je za projekt ${guest.projekt}. ${guest.opis}. `;
-            const closing = `Lep pozdrav in dober sestanek!`;
-            
-            const fullSpeech = greeting + navigation + instructions + details + closing;
-            
-            // Govori počasi in jasno
-            speak(fullSpeech, "IRGO Navigacija", 0.9);
-        }
-
-        // Pomožna funkcija za opis sobe
-        function getRoomDescription(roomNumber) {
-            const descriptions = {
-                "101": "vhod v prvo etažo",
-                "102": "sejna soba",
-                "103": "tajništvo",
-                "104": "stranišče",
-                "105": "stopnice",
-                "201": "druga etaža",
-                "202": "kuhinja",
-                "203": "administracija"
-            };
-            return descriptions[roomNumber] || "vaš prostor za sestanek";
-        }
-
-        // Nazaj na glavni vmesnik
-        function backToMain() {
-            // Ustavi govor
-            window.speechSynthesis.cancel();
-            
-            // Skrij navigacijo
-            document.getElementById('nav-container').classList.remove('active');
-            document.getElementById('back-button').classList.remove('visible');
-            
-            // Prikaži glavni vmesnik
-            document.getElementById('main-container').classList.remove('hidden');
-            
-            // Izhod iz fullscreen
-            if (document.exitFullscreen && document.fullscreenElement) {
-                document.exitFullscreen().catch(e => console.log(e));
-            }
-            
-            speak("Vrnili ste se na začetni zaslon. Kako vam lahko še pomagam?", "IRGO");
-        }
-
-        // Loading screen
-        function showLoading(show) {
-            const loadingScreen = document.getElementById('loading-screen');
-            if (show) {
-                loadingScreen.classList.add('active');
-            } else {
-                loadingScreen.classList.remove('active');
-            }
-        }
-
-        // Update loading status
-        function updateLoadingStatus(message) {
-            const statusElement = document.getElementById('loading-status');
-            if (statusElement) {
-                statusElement.textContent = message;
-            }
-            console.log("Loading status:", message);
-        }
-
-        // Govor z IRGO glasom - uporabi ženskega glas
-        function speak(text, name = "", rate = 0.95) {
-            // Ustavi vse govore preden začnemo nov
-            window.speechSynthesis.cancel();
-            
-            // Čakaj malo preden začnemo z novim govorom
-            setTimeout(() => {
-                const msg = new SpeechSynthesisUtterance(text);
-                
-                // Nastavi ženskega glas Petra ali drugi ženski glas
-                if (femaleVoice) {
-                    msg.voice = femaleVoice;
-                    msg.lang = femaleVoice.lang;
-                    console.log("Uporabljam glas:", femaleVoice.name, "jezik:", femaleVoice.lang);
-                } else {
-                    // Če še nismo našli glasa, poskusi ponovno
-                    const voices = speechSynthesis.getVoices();
-                    if (voices.length > 0) {
-                        findFemaleSlovenianVoice();
-                        if (femaleVoice) {
-                            msg.voice = femaleVoice;
-                            msg.lang = femaleVoice.lang;
-                        } else {
-                            msg.lang = 'sl-SI'; // Privzeti slovenski
-                        }
-                    } else {
-                        msg.lang = 'sl-SI'; // Privzeti slovenski
-                    }
-                    console.log("Uporabljam privzeti slovenski jezik");
-                }
-                
-                // Nastavitve govora
-                msg.rate = rate; // Hitrost (0.1 - 10, 1 = normalno)
-                msg.pitch = 1.05; // Višina (0 - 2, 1 = normalno)
-                msg.volume = 1; // Glasnost (0 - 1)
-                
-                // Vizualni efekti - hologram govori
-                const hologram = document.getElementById('irgo-hologram');
-                if (hologram) hologram.classList.add('speaking');
-                
-                const voiceVis = document.getElementById('voice-visualizer');
-                if (voiceVis) voiceVis.style.opacity = '1';
-                
-                const statusText = document.getElementById('status-text');
-                if (statusText) statusText.textContent = "IRGO GOVORI";
-                
-                showResponse(text, name || "IRGO Asistentka");
-                
-                // Animacija glasovnih palic
-                const voiceBars = document.querySelectorAll('.voice-bar');
-                voiceBars.forEach(bar => {
-                    bar.style.animation = 'voice-bar-pulse 0.5s infinite alternate';
+            const cells = rows[i].split(',');
+            if(cells.length >= 5) {
+                data.push({
+                    ime: cells[0]?.trim() || '',
+                    soba: cells[1]?.trim() || '',
+                    projekt: cells[2]?.trim() || '',
+                    opis: cells[3]?.trim() || '',
+                    vrijeme: cells[4]?.trim() || ''
                 });
-                
-                // Ko se govor konča
-                msg.onend = () => {
-                    if (hologram) hologram.classList.remove('speaking');
-                    if (voiceVis) voiceVis.style.opacity = '0';
-                    if (statusText) statusText.textContent = "IRGO ONLINE";
-                    
-                    voiceBars.forEach(bar => {
-                        bar.style.animation = 'none';
+            }
+        }
+        
+        excelData = data;
+        console.log("Podatki naloženi:", data);
+        
+        if(data.length === 0) {
+            excelData = [
+                { ime: "Janez Novak", soba: "102", projekt: "IRGO Mobile", opis: "Mesečno srečanje", vrijeme: "09:00" },
+                { ime: "Ana Kovač", soba: "103", projekt: "Smart Office", opis: "Delavnica IoT", vrijeme: "10:30" },
+                { ime: "Marko Petek", soba: "202", projekt: "AI Assistant", opis: "Predstavitev demo", vrijeme: "11:45" }
+            ];
+        }
+        
+    } catch (error) {
+        console.error("Napaka pri nalaganju podatkov:", error);
+        excelData = [
+            { ime: "Janez Novak", soba: "102", projekt: "IRGO Mobile", opis: "Mesečno srečanje", vrijeme: "09:00" },
+            { ime: "Ana Kovač", soba: "103", projekt: "Smart Office", opis: "Delavnica IoT", vrijeme: "10:30" },
+            { ime: "Marko Petek", soba: "202", projekt: "AI Assistant", opis: "Predstavitev demo", vrijeme: "11:45" }
+        ];
+    }
+}
+
+// Inicializiraj 3D navigacijsko sceno
+async function initNavigationScene() {
+    updateLoadingStatus("Pripravljam 3D navigacijo...");
+    
+    try {
+        // Ustvari sceno
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x00050a);
+        
+        // Kamera
+        camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.5, 1000);
+        camera.position.set(15, 12, 12);
+        
+        // WebGL Renderer
+        renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.getElementById('nav-container').appendChild(renderer.domElement);
+        
+        // CSS2D Renderer za oznake
+        labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.getElementById('nav-container').appendChild(labelRenderer.domElement);
+        
+        // Orbit kontrole
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
+        
+        // Svetloba
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0x00aaff, 1.2);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+        
+        // Naloži model
+        updateLoadingStatus("Nalagam 3D model...");
+        await loadHouseModel('https://raw.githubusercontent.com/Stroteh/Navigator/main/hisa.glb');
+        
+        // Dodaj navigacijsko pot
+        createNavigationPath();
+        
+        // Animacijska zanka
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+            if (labelRenderer && scene && camera) {
+                labelRenderer.render(scene, camera);
+            }
+            
+            if (window.arrowTexture) {
+                window.arrowTexture.offset.x -= animationSpeed;
+            }
+            
+            if (window.ball && window.curve) {
+                window.t = (window.t || 0) + animationSpeed;
+                if (window.t > 1) window.t = 0;
+                window.ball.position.copy(window.curve.getPointAt(window.t));
+            }
+        }
+        animate();
+        
+        // Resize handler
+        window.addEventListener('resize', () => {
+            if (camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+            if (renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            if (labelRenderer) {
+                labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        console.log("3D navigacija pripravljena.");
+        
+    } catch (error) {
+        console.error("Napaka pri inicializaciji navigacijske scene:", error);
+        throw error;
+    }
+}
+
+// Naloži hišni model
+async function loadHouseModel(url) {
+    return new Promise((resolve, reject) => {
+        const loader = new THREE.GLTFLoader();
+        
+        loader.load(url, (gltf) => {
+            gltf.scene.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshPhongMaterial({
+                        color: 0x00ffff, 
+                        transparent: true, 
+                        opacity: 0.15, 
+                        side: THREE.DoubleSide, 
+                        depthWrite: false
                     });
-                };
-                
-                // Ob napaki
-                msg.onerror = (event) => {
-                    console.error("Napaka pri govoru:", event);
-                    if (hologram) hologram.classList.remove('speaking');
-                    if (voiceVis) voiceVis.style.opacity = '0';
-                    if (statusText) statusText.textContent = "IRGO ONLINE";
-                };
-                
-                // Začni govoriti
-                window.speechSynthesis.speak(msg);
-            }, 100); // Majhna zamuda za stabilnost
-        }
+                    
+                    const edges = new THREE.EdgesGeometry(child.geometry);
+                    const line = new THREE.LineSegments(
+                        edges, 
+                        new THREE.LineBasicMaterial({ 
+                            color: 0x00ffff, 
+                            transparent: true, 
+                            opacity: 0.6 
+                        })
+                    );
+                    child.add(line);
+                    
+                    if (child.name === '3D_Solid011' || child.name.toLowerCase().includes('sejna')) {
+                        child.material.color.set(0xff5500);
+                        child.material.opacity = 0.5;
+                        child.material.emissive = new THREE.Color(0xff5500);
+                        child.material.emissiveIntensity = 0.4;
+                    }
+                }
+            });
+            
+            scene.add(gltf.scene);
+            
+            // Dodaj oznake za sobe
+            addRoomLabels();
+            
+            resolve();
+        }, undefined, (error) => {
+            console.error("Napaka pri nalaganju modela:", error);
+            // Dodaj fallback geometriju ako model ne uspije učitati
+            addFallbackGeometry();
+            resolve();
+        });
+    });
+}
 
-        // Prikaži odgovor
-        function showResponse(text, sub) {
-            const display = document.getElementById('response-display');
-            const textElement = document.getElementById('response-text');
-            const timeElement = document.getElementById('response-time');
-            
-            if (!display || !textElement || !timeElement) return;
-            
-            // Skrajšaj dolg text za prikaz
-            const displayText = text.length > 150 ? text.substring(0, 150) + "..." : text;
-            textElement.textContent = displayText;
-            timeElement.textContent = sub;
-            
-            display.style.opacity = '1';
-            
-            // Samo kratek text ostane dalj časa
-            const displayTime = text.length > 100 ? 8000 : 10000;
-            
-            setTimeout(() => {
-                display.style.opacity = '0';
-            }, displayTime);
-        }
+// Fallback geometrija ako model ne uspije učitati
+function addFallbackGeometry() {
+    const geometry = new THREE.BoxGeometry(10, 5, 15);
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.DoubleSide
+    });
+    const cube = new THREE.Mesh(geometry, material);
+    cube.position.set(0, 2.5, -10);
+    scene.add(cube);
+    
+    // Dodaj oznake
+    addRoomLabels();
+}
 
-        // Zaženi aplikacijo
-        window.addEventListener('DOMContentLoaded', init);
-        
-        // Tablet optimizacija: prepreči zoom z dvema prstoma
-        document.addEventListener('touchstart', function(event) {
-            if (event.touches.length > 1) {
-                event.preventDefault();
+// Dodaj oznake za sobe
+function addRoomLabels() {
+    const rooms = [
+        { name: 'Sejna soba', x: -8.00, y: 6.73, z: -9.00 },
+        { name: 'Tajništvo', x: 2, y: 6, z: -12.98 },
+        { name: 'Tajništvo', x: -9.55, y: 6.62, z: -14.10 },
+        { name: 'Kuhinja', x: -9.03, y: 6.27, z: -19.24 },
+        { name: 'Toalet', x: -2.39, y: 6.44, z: -19.84 },
+        { name: 'Vhod', x: 0.00, y: 0.0, z: -6.00 }
+    ];
+    
+    rooms.forEach(room => {
+        const div = document.createElement('div');
+        div.className = 'room-label';
+        div.innerHTML = `<strong>${room.name}</strong>`;
+        const label = new CSS2DObject(div);
+        label.position.set(room.x, room.y + 1, room.z);
+        scene.add(label);
+    });
+}
+
+// Ustvari navigacijsko pot
+function createNavigationPath() {
+    const pathPoints = [
+        new THREE.Vector3(-1.56, 0.15, -6.03), 
+        new THREE.Vector3(-2.80, 0.15, -5.70), 
+        new THREE.Vector3(-3.95, 0.15, -5.00), 
+        new THREE.Vector3(-4.20, 0.35, -4.50), 
+        new THREE.Vector3(-4.25, 0.60, -3.80), 
+        new THREE.Vector3(-4.20, 1.00, -3.10), 
+        new THREE.Vector3(-4.10, 1.50, -2.40), 
+        new THREE.Vector3(-4.08, 1.80, -1.80), 
+        new THREE.Vector3(-3.95, 2.07, -1.20), 
+        new THREE.Vector3(-3.80, 2.07, -0.80), 
+        new THREE.Vector3(-3.20, 2.07, -0.65), 
+        new THREE.Vector3(-2.60, 2.07, -0.75), 
+        new THREE.Vector3(-2.35, 2.20, -1.30), 
+        new THREE.Vector3(-2.45, 2.65, -2.10), 
+        new THREE.Vector3(-2.40, 3.00, -2.90), 
+        new THREE.Vector3(-2.38, 3.45, -3.70), 
+        new THREE.Vector3(-2.45, 3.80, -4.50), 
+        new THREE.Vector3(-2.90, 3.94, -5.40), 
+        new THREE.Vector3(-3.50, 3.94, -6.30), 
+        new THREE.Vector3(-4.50, 3.94, -7.40), 
+        new THREE.Vector3(-5.60, 3.94, -8.50), 
+        new THREE.Vector3(-6.04, 3.94, -8.78)
+    ];
+    
+    window.curve = new THREE.CatmullRomCurve3(pathPoints);
+    window.arrowTexture = createArrowTexture();
+    
+    const tubeGeo = new THREE.TubeGeometry(window.curve, 110, 0.4, 8, false);
+    const tubeMat = new THREE.MeshBasicMaterial({ 
+        map: window.arrowTexture, 
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthTest: false
+    });
+    const pathMesh = new THREE.Mesh(tubeGeo, tubeMat);
+    pathMesh.renderOrder = 999;
+    scene.add(pathMesh);
+    
+    const ballGeometry = new THREE.SphereGeometry(0.14, 16, 16);
+    const ballMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xffffff, 
+        depthTest: false 
+    });
+    window.ball = new THREE.Mesh(ballGeometry, ballMaterial);
+    window.ball.renderOrder = 1000;
+    scene.add(window.ball);
+}
+
+// Ustvari teksturo puščic
+function createArrowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; 
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, 256, 128);
+    ctx.fillStyle = '#ff0055';
+
+    ctx.fillRect(20, 54, 140, 20);
+    ctx.beginPath();
+    ctx.moveTo(160, 24);
+    ctx.lineTo(230, 64);
+    ctx.lineTo(160, 104);
+    ctx.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.repeat.set(3, 2);
+    return texture;
+}
+
+// POSEBNI SETUP ZA TABLET - optimizirano za Petra glas
+async function setupSpeechSynthesisForTablet() {
+    updateLoadingStatus("Pripravljam glasovni sistem...");
+    
+    return new Promise((resolve) => {
+        // Čekaj malo da se stranica potpuno učita
+        setTimeout(() => {
+            if (!window.speechSynthesis) {
+                console.error("Web Speech API not supported");
+                alert("Vaš preglednik ne podržava govorni sintetizator. Molimo koristite Chrome ili Safari.");
+                resolve();
+                return;
             }
-        }, { passive: false });
-        
-        // Tablet optimizacija: prepreči dvojni tap za zoom
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
+            
+            // Pokupi sve dostupne glasove
+            const voices = speechSynthesis.getVoices();
+            console.log("Dostupni glasovi na uređaju:", voices);
+            
+            // Detekcija tableta/mobitela
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            console.log("Je li tablet/mobitel?", isMobile);
+            
+            // Pripremi za Petra glas
+            findAndSetPetraVoice(voices);
+            
+            // Ako nismo našli Petra glas, pokušaj ponovno nakon 1 sekunde
+            if (!femaleVoice && isMobile) {
+                setTimeout(() => {
+                    const voicesAgain = speechSynthesis.getVoices();
+                    console.log("Ponovno učitani glasovi:", voicesAgain);
+                    findAndSetPetraVoice(voicesAgain);
+                    
+                    // Ako i dalje nema Petra, koristi default
+                    if (!femaleVoice && voicesAgain.length > 0) {
+                        femaleVoice = voicesAgain[0];
+                        console.log("Koristim default glas:", femaleVoice.name);
+                    }
+                    
+                    resolve();
+                }, 1000);
+            } else {
+                resolve();
             }
-            lastTouchEnd = now;
-        }, false);
-    </script>
-</body>
-</html>
+        }, 500);
+    });
+}
+
+// Funkcija za pronalaženje Petra glasa
+function findAndSetPetraVoice(voices) {
+    // Prioriteti za Petra glas:
+    // 1. Petra (slovenski)
+    // 2. Bilo koji slovenski ženski glas
+    // 3. Bilo koji ženski glas
+    // 4. Prvi dostupan glas
+    
+    let foundVoice = null;
+    
+    // Prvo traži Petra
+    foundVoice = voices.find(voice => 
+        voice.name.includes('Petra') && 
+        voice.lang.startsWith('sl')
+    );
+    
+    // Ako nema Petra, traži bilo koji slovenski ženski
+    if (!foundVoice) {
+        foundVoice = voices.find(voice => 
+            voice.lang.startsWith('sl') && 
+            (voice.name.toLowerCase().includes('female') ||
+             voice.name.includes('žensk') ||
+             voice.name.includes('Žensk') ||
+             voice.name.includes('Vesna') ||
+             voice.name.includes('Alenka'))
+        );
+    }
+    
+    // Ako nema slovenskog ženskog, traži bilo koji ženski
+    if (!foundVoice) {
+        foundVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes('female') ||
+            voice.name.includes('Microsoft Zira') ||
+            voice.name.includes('Google UK Female') ||
+            voice.name.includes('Google US Female')
+        );
+    }
+    
+    // Ako nema ni toga, uzmi prvi dostupan
+    if (!foundVoice && voices.length > 0) {
+        foundVoice = voices[0];
+    }
+    
+    femaleVoice = foundVoice;
+    
+    if (femaleVoice) {
+        console.log("Odabran glas za tablet:", femaleVoice.name, "Jezik:", femaleVoice.lang);
+        updateLoadingStatus("Glasovni sistem pripravljen: " + femaleVoice.name);
+    } else {
+        console.warn("Nijedan glas nije dostupan");
+        updateLoadingStatus("Glasovni sistem nije dostupan");
+    }
+}
+
+// Glavna logika za prihod
+async function handleArrival() {
+    if (!excelData || excelData.length === 0) {
+        speak("Napaka: Podatki o sestankih nisu dostupni. Molimo osvježite stranicu.", "IRGO");
+        return;
+    }
+    
+    try {
+        showResponse("IRGO traži vaš termin...", "Traženje");
+        
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        
+        let bestGuest = null;
+        let minDifference = Infinity;
+        
+        excelData.forEach(guest => {
+            if (!guest.vrijeme) return;
+            
+            const timeStr = guest.vrijeme.toString();
+            const timeParts = timeStr.split(':');
+            if (timeParts.length < 2) return;
+            
+            const h = parseInt(timeParts[0], 10);
+            const m = parseInt(timeParts[1], 10);
+            
+            if (isNaN(h) || isNaN(m)) return;
+            
+            const plannedMinutes = h * 60 + m;
+            const difference = Math.abs(currentMinutes - plannedMinutes);
+            
+            if (difference < 120 && difference < minDifference) {
+                minDifference = difference;
+                bestGuest = guest;
+            }
+        });
+
+        if (bestGuest) {
+            currentGuest = bestGuest;
+            showNavigation(bestGuest);
+        } else {
+            currentGuest = excelData[0];
+            showNavigation(excelData[0]);
+        }
+    } catch (e) {
+        console.error("Greška:", e);
+        speak("Greška u obradi podataka. Koristim zadani termin.", "IRGO");
+        if (excelData && excelData.length > 0) {
+            currentGuest = excelData[0];
+            showNavigation(excelData[0]);
+        }
+    }
+}
+
+// Prikaži navigaciju
+function showNavigation(guest) {
+    document.getElementById('main-container').classList.add('hidden');
+    document.getElementById('nav-container').classList.add('active');
+    document.getElementById('back-button').classList.add('visible');
+    
+    document.getElementById('nav-guest-name').innerHTML = `<strong>${guest.ime}</strong>`;
+    document.getElementById('nav-room').textContent = guest.soba;
+    document.getElementById('nav-room-name').textContent = `(${getRoomDescription(guest.soba)})`;
+    document.getElementById('nav-time').textContent = guest.vrijeme;
+    document.getElementById('nav-description').textContent = `${guest.projekt}: ${guest.opis}`;
+    
+    // Za tablete: isključi orbit controls za bolji touch experience
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        if (controls) {
+            controls.enableRotate = false;
+            controls.enablePan = false;
+            controls.enableZoom = true; // Zoom ostaje za pinch gesture
+        }
+    }
+    
+    setTimeout(() => {
+        startNavigationSpeech(guest);
+    }, 500);
+}
+
+// Začni s govorom navigacije - OPTIMIZIRANO ZA TABLET
+function startNavigationSpeech(guest) {
+    const roomDescription = getRoomDescription(guest.soba);
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const [h, m] = guest.vrijeme.split(':').map(Number);
+    const meetingTime = h * 60 + m;
+    const timeDifference = currentTime - meetingTime;
+    
+    let greeting = `Pozdravljeni, ${guest.ime}. `;
+    
+    // Tablet optimizacija: kraći govor za bolje iskustvo
+    if (timeDifference < -15) {
+        greeting += `Prišli ste ranije. Imate vremena za kavu! `;
+        animationSpeed = 0.0003;
+        document.getElementById('nav-instruction').textContent = "Sledite puščicama do sobe";
+    } else if (timeDifference < -5) {
+        greeting += `Odlično, točno na vrijeme! `;
+        animationSpeed = 0.0004;
+        document.getElementById('nav-instruction').textContent = "Sledite puščicama";
+    } else if (timeDifference > 15) {
+        greeting += `Počutite se opušteno. Brzo vas vodim do sobe. `;
+        animationSpeed = 0.0008;
+        document.getElementById('nav-instruction').textContent = "Brzo sledite puščicama";
+    } else if (timeDifference > 5) {
+        greeting += `Idemo brzo do sobe. `;
+        animationSpeed = 0.0007;
+        document.getElementById('nav-instruction').textContent = "Sledite puščicama";
+    } else {
+        greeting += `Savršeno vrijeme! `;
+        animationSpeed = 0.0006;
+        document.getElementById('nav-instruction').textContent = "Sledite puščicama";
+    }
+    
+    const roomNumberSpoken = slovenianNumbers.pronounceRoomNumber(guest.soba);
+    const navigation = `Sastanak je u sobi ${roomNumberSpoken}. ${roomDescription}. `;
+    const instructions = `Sledite crvenim strelicama na ekranu. `;
+    const closing = `Ugodan sastanak!`;
+    
+    // Kraća verzija za tablet
+    const fullSpeech = greeting + navigation + instructions + closing;
+    
+    // Govori sporije i jasnije za tablet
+    speak(fullSpeech, "IRGO Navigacija", 0.85);
+}
+
+// Pomožna funkcija za opis sobe
+function getRoomDescription(roomNumber) {
+    const descriptions = {
+        "101": "prizemlje",
+        "102": "konferencijska soba",
+        "103": "tajništvo",
+        "104": "toalet",
+        "105": "stepenice",
+        "201": "prvi sprat",
+        "202": "kuhinja",
+        "203": "administracija"
+    };
+    return descriptions[roomNumber] || "sastanak prostor";
+}
+
+// Nazad na glavni interfejs
+function backToMain() {
+    window.speechSynthesis.cancel();
+    
+    document.getElementById('nav-container').classList.remove('active');
+    document.getElementById('back-button').classList.remove('visible');
+    document.getElementById('main-container').classList.remove('hidden');
+    
+    // Ponovo omogući kontrole
+    if (controls) {
+        controls.enableRotate = true;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+    }
+    
+    speak("Vraćeni ste na početni ekran. Kako vam mogu pomoći?", "IRGO");
+}
+
+// Loading screen
+function showLoading(show) {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (show) {
+        loadingScreen.classList.add('active');
+    } else {
+        loadingScreen.classList.remove('active');
+    }
+}
+
+// Update loading status
+function updateLoadingStatus(message) {
+    const statusElement = document.getElementById('loading-status');
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+}
+
+// Govor s IRGO glasom - OPTIMIZIRANO ZA TABLET
+function speak(text, name = "", rate = 0.85) {
+    // Zaustavi sve govore prije nego počnemo novi
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+    
+    // Mali delay za stabilnost
+    setTimeout(() => {
+        if (!window.speechSynthesis) {
+            console.error("Speech synthesis not available");
+            showResponse(text, name || "IRGO Asistent");
+            return;
+        }
+        
+        const msg = new SpeechSynthesisUtterance(text);
+        
+        // Postavi Petra glas ili alternativu
+        if (femaleVoice) {
+            msg.voice = femaleVoice;
+            msg.lang = femaleVoice.lang;
+            console.log("Koristim glas:", femaleVoice.name);
+        } else {
+            // Ako nema glasa, pokušaj ponovno naći
+            const voices = speechSynthesis.getVoices();
+            findAndSetPetraVoice(voices);
+            if (femaleVoice) {
+                msg.voice = femaleVoice;
+                msg.lang = femaleVoice.lang;
+            } else {
+                msg.lang = 'sl-SI';
+            }
+        }
+        
+        // Tablet optimizacija: sporije i jasnije
+        msg.rate = rate;
+        msg.pitch = 1.0; // Normalna visina za bolju razumljivost
+        msg.volume = 1.0;
+        
+        // Vizualni efekti
+        const hologram = document.getElementById('irgo-hologram');
+        if (hologram) hologram.classList.add('speaking');
+        
+        const voiceVis = document.getElementById('voice-visualizer');
+        if (voiceVis) voiceVis.style.opacity = '1';
+        
+        const statusText = document.getElementById('status-text');
+        if (statusText) statusText.textContent = "IRGO GOVORI";
+        
+        showResponse(text, name || "IRGO Asistent");
+        
+        // Animacija glasovnih traka
+        const voiceBars = document.querySelectorAll('.voice-bar');
+        voiceBars.forEach(bar => {
+            bar.style.animation = 'voice-bar-pulse 0.5s infinite alternate';
+        });
+        
+        // Kada govor završi
+        msg.onend = () => {
+            if (hologram) hologram.classList.remove('speaking');
+            if (voiceVis) voiceVis.style.opacity = '0';
+            if (statusText) statusText.textContent = "IRGO ONLINE";
+            
+            voiceBars.forEach(bar => {
+                bar.style.animation = 'none';
+            });
+        };
+        
+        // Na grešku
+        msg.onerror = (event) => {
+            console.error("Greška u govoru:", event);
+            if (hologram) hologram.classList.remove('speaking');
+            if (voiceVis) voiceVis.style.opacity = '0';
+            if (statusText) statusText.textContent = "IRGO ONLINE";
+            
+            // Fallback: prikaži tekst ako govor ne radi
+            showResponse(text + " (glas nije dostupan)", name || "IRGO");
+        };
+        
+        // Zapocni govor
+        window.speechSynthesis.speak(msg);
+    }, 200);
+}
+
+// Prikaži odgovor
+function showResponse(text, sub) {
+    const display = document.getElementById('response-display');
+    const textElement = document.getElementById('response-text');
+    const timeElement = document.getElementById('response-time');
+    
+    if (!display || !textElement || !timeElement) return;
+    
+    const displayText = text.length > 150 ? text.substring(0, 150) + "..." : text;
+    textElement.textContent = displayText;
+    timeElement.textContent = sub;
+    
+    display.style.opacity = '1';
+    
+    const displayTime = text.length > 100 ? 8000 : 10000;
+    
+    setTimeout(() => {
+        display.style.opacity = '0';
+    }, displayTime);
+}
+
+// Pokreni aplikaciju
+window.addEventListener('DOMContentLoaded', init);
+
+// Tablet optimizacija: spriječi zoom s dva prsta
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function(event) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+    }
+    lastTouchEnd = now;
+}, { passive: false });
+
+// Detekcija tableta i prilagodba
+if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    console.log("Tablet/mobitel detektiran, primjenjujem optimizacije");
+    
+    // Povećaj tap targets za bolje dodirivanje
+    document.querySelectorAll('.irgo-button, .back-button').forEach(button => {
+        button.style.padding = '1.5rem 3rem';
+        button.style.fontSize = '1.2rem';
+    });
+    
+    // Optimiziraj vizualizator glasa za manji ekran
+    document.getElementById('voice-visualizer').style.bottom = '150px';
+}
+</script>
